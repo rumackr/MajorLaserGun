@@ -15,27 +15,27 @@
 Adafruit_NeoPixel pwrStrip = Adafruit_NeoPixel(PWRLEDs, PWRUP, NEO_RGBW + NEO_KHZ800);
 
 void setup() {
-  pwrStrip.begin();
+    pwrStrip.begin();
 }
 
 void loop() {
-  pwrUpFx(); // Blue
-  pwrDownFx();
+    pwrUpFx();
+    pwrDownFx();
 }
 
 static void pwrUpFx(void) {
-  delay(15);
-  for (uint8_t i = 0; i < 10; i++) {
-    pwrStrip.setPixelColor(i, 0, 0, 50, 0);
-    pwrStrip.show();
-    delay(100);
-  }
-  delay(500);
+    delay(15);
+    for (uint8_t i = 0; i < 10; i++) {
+        pwrStrip.setPixelColor(i, 0, 0, 50, 0);
+        pwrStrip.show();
+        delay(100);
+    }
+    delay(500);
 }
 
 static void pwrDownFx(void) {
-  for (uint8_t i = 0; i < 10; i++) {
-    pwrStrip.setPixelColor(i, 0, 0, 0, 0);
-    pwrStrip.show();
-  }
+    for (uint8_t i = 0; i < 10; i++) {
+        pwrStrip.setPixelColor(i, 0, 0, 0, 0);
+        pwrStrip.show();
+    }
 }
