@@ -1,9 +1,10 @@
 /*********************************************************************
-* FILENAME:  customCharsFor4an.ino
+* FILENAME:  RandomCharsAndBars.ino
 * AUTHOR:    reidrumack@gmail.com <Reid Rumack>
 * DATE:      23 June 2016
 * MICRO:     ATtiny 85
-* PRODUCTs:     
+* PRODUCTS:  Adafruit 4 char 14-seg FeatherWing 
+*            Adafruit 24-bar Graph I2C Backpack
 * VERSION:   1.2
 **********************************************************************/
 

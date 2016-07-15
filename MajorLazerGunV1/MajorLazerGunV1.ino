@@ -21,6 +21,7 @@
 #define SWITCHS A0
 
 //pins for sound board 
+#define TRIGGER      A2
 #define SFX_ACT      A1
 #define SFX_RST      7
 #define LASER_LED    3
@@ -45,9 +46,10 @@ LiquidCrystal lcd(8, 9, 10, 11, 12, 13);
 volatile uint8_t CURRENTMODE = 0;
 volatile uint8_t LCDMODE = 0;
 volatile uint8_t VOLUME = 16;
-uint8_t NUM_VOLUME = 204;
-const uint32_t GREEN = strip.Color(0, 255, 0);
-const uint32_t RED = strip.Color(255, 0, 0);
+volatile boolean trackTriggered = false;  
+uint8_t          NUM_VOLUME = 204;
+const uint32_t   GREEN = strip.Color(0, 255, 0);
+const uint32_t   RED = strip.Color(255, 0, 0);
 
 static  char* modeString[]= {"   Semi  Auto", "   Full  Auto", "  Light It Up", "    Lean On"};
 static  char* modeTrack[] = {"lazer"};
@@ -167,7 +169,7 @@ void semiAuto(){
      sfx.playTrack(toPlay);
      pulseLights(GREEN);
      fireLaserLed();
-     while(analogRead(SFX_ACT)<= 512);
+     while(analogRead(SFX_ACT) <= 512);
      while(analogRead(A2)> 512);
 }
 void fullAuto(){
@@ -184,6 +186,22 @@ void triggerHandler(){
         break;
         case 1:
             fullAuto();  
+        break;
+        
+        case 2:
+            if(!trackTriggered){
+                trackTriggered = true;
+                sfx.playTrack(1);    
+            }
+            playPause();
+        break;
+        
+        case 3:
+            if(!trackTriggered){
+                trackTriggered = true;
+                sfx.playTrack(2);    
+            }
+            playPause();
         break;
     }
 }
@@ -214,8 +232,8 @@ void playRecursive(){
 
 void selectMode(){
     CURRENTMODE = LCDMODE;
+    trackTriggered = false;
 }
-
 
 void clearLcdTopLine(){
     lcd.setCursor(0,0);
