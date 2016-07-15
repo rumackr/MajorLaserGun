@@ -8,11 +8,8 @@
 **********************************************************************/
 #include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
+#include <Adafruit_NeoPixel.h>
 #include <Adafruit_Soundboard.h>
-/********************************************************************
- * PIN Defineintions  
- */
-
 
 
 // difines the pin that the switch are are on
@@ -26,6 +23,8 @@
 //pins for sound board 
 #define SFX_ACT      A1
 #define SFX_RST      7
+#define LASER_LED    3
+#define NEO_PIXLES   2
 
 
 
@@ -34,10 +33,11 @@
 #define LEFT_ADC    765
 #define DOWN_ADC    694
 #define RIGHT_ADC   1023
-
+#define NUM_PIXELS  24
 #define CENTER_ADC  930
 SoftwareSerial ss = SoftwareSerial(6, 5);
 Adafruit_Soundboard sfx = Adafruit_Soundboard(&ss, NULL, SFX_RST);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEO_PIXLES, NEO_RGBW + NEO_KHZ800);
 
 
 LiquidCrystal lcd(8, 9, 10, 11, 12, 13);
@@ -46,6 +46,8 @@ volatile uint8_t CURRENTMODE = 0;
 volatile uint8_t LCDMODE = 0;
 volatile uint8_t VOLUME = 16;
 uint8_t NUM_VOLUME = 204;
+const uint32_t GREEN = strip.Color(0, 255, 0);
+const uint32_t RED = strip.Color(255, 0, 0);
 
 static  char* modeString[]= {"   Semi  Auto", "   Full  Auto", "  Light It Up", "    Lean On"};
 static  char* modeTrack[] = {"lazer"};
@@ -55,6 +57,8 @@ void setup(){
     Serial.begin(115200);
     ss.begin(9600);
     lcd.begin(16, 2);
+    pinMode(LASER_LED, OUTPUT);
+    strip.begin();
     while(!Serial);
     lcd.clear();
     for(uint8_t i = 0; i < VOLUME;i++){
@@ -68,8 +72,9 @@ void setup(){
 void loop(){
         if(analogRead(A2) > 512){
             trigger();
+        }else{
+          btnHandler(analogRead(SWITCHS));
         }
-        btnHandler(analogRead(SWITCHS));
 }
 
 void btnHandler(uint16_t adcValue){
@@ -160,13 +165,17 @@ void cycleLeft(){
 void semiAuto(){
      uint8_t toPlay = 0;
      sfx.playTrack(toPlay);
-     while(analogRead(A1)<= 512);
+     pulseLights(GREEN);
+     fireLaserLed();
+     while(analogRead(SFX_ACT)<= 512);
      while(analogRead(A2)> 512);
 }
 void fullAuto(){
      uint8_t toPlay = 0;
      sfx.playTrack(toPlay);
-     while(analogRead(A1)<= 512);
+     pulseLights(GREEN);
+     fireLaserLed();
+     while(analogRead(SFX_ACT)<= 512);
 }
 void triggerHandler(){
     switch(CURRENTMODE){
@@ -178,6 +187,31 @@ void triggerHandler(){
         break;
     }
 }
+
+
+    
+void playPause(){
+    if(analogRead(SFX_ACT)<= 512){
+        pauseRecursive();
+    }else{
+        playRecursive();
+    }
+    delay(500);
+}
+
+void pauseRecursive(){
+    if (! sfx.pause()) {
+        delay(25);
+        pauseRecursive();
+    }
+}
+void playRecursive(){
+    if (! sfx.unpause()) {
+        delay(25);
+        playRecursive();
+    }
+}    
+
 void selectMode(){
     CURRENTMODE = LCDMODE;
 }
@@ -189,3 +223,20 @@ void clearLcdTopLine(){
     lcd.setCursor(0,0);
 }
 
+
+void fireLaserLed(){
+    digitalWrite(LASER_LED, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(100);
+    digitalWrite(LASER_LED, LOW);    // turn the LED off by making the voltage LOW
+}
+
+void pulseLights(uint32_t c){   
+    for (int i = 0; i <= NUM_PIXELS; i++) { 
+        strip.setPixelColor(i, c);
+        if(i!=0){
+          strip.setPixelColor(i-1, 0); 
+        }
+        strip.show();
+        delay(10);
+    }
+}

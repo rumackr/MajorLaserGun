@@ -14,7 +14,7 @@
 #define PWRLEDs 10
 
 Adafruit_NeoPixel pwrStrip = Adafruit_NeoPixel(
-        PWRLEDs, PWRUP, NEO_RGBW + NEO_KHZ800);
+        PWRLEDs, PWRUP, NEO_GRB + NEO_KHZ800);
 
 void setup() {
     pwrStrip.begin();
