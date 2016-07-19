@@ -4,7 +4,7 @@
 * DATE:      23 June 2016
 * Arduino:   Mini Pro
 * PRODUCT:   LCD 1602A, 5 way nav switch and Game Switch (lever switch)
-* VERSION:   1.31
+* VERSION:   1.3
 **********************************************************************/
 #include <SoftwareSerial.h>
 #include <LiquidCrystal.h>
@@ -38,7 +38,7 @@
 #define CENTER_ADC  930
 SoftwareSerial ss = SoftwareSerial(6, 5);
 Adafruit_Soundboard sfx = Adafruit_Soundboard(&ss, NULL, SFX_RST);
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEO_PIXLES, NEO_RGBW + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEO_PIXLES, NEO_GRB + NEO_KHZ800);
 
 
 LiquidCrystal lcd(8, 9, 10, 11, 12, 13);
@@ -46,16 +46,21 @@ LiquidCrystal lcd(8, 9, 10, 11, 12, 13);
 volatile uint8_t CURRENTMODE = 0;
 volatile uint8_t LCDMODE = 0;
 volatile uint8_t VOLUME = 16;
-volatile boolean trackTriggered = false;  
+volatile boolean trackTriggered = false;
+volatile boolean trackPlaying = false;  
+
 uint8_t          NUM_VOLUME = 204;
 const uint32_t   GREEN = strip.Color(0, 255, 0);
-const uint32_t   RED = strip.Color(255, 0, 0);
-
+const uint32_t   RED =strip .Color(255, 0, 0);
+static  uint32_t   NEO_COLOR;
 static  char* modeString[]= {"   Semi  Auto", "   Full  Auto", "  Light It Up", "    Lean On"};
 static  char* modeTrack[] = {"lazer"};
 
 
 void setup(){
+
+    NEO_COLOR = GREEN;
+  
     Serial.begin(115200);
     ss.begin(9600);
     lcd.begin(16, 2);
@@ -72,15 +77,16 @@ void setup(){
 }
 
 void loop(){
-        if(analogRead(A2) > 512){
+
+        if(analogRead(TRIGGER) > 512){
             trigger();
         }else{
-          btnHandler(analogRead(SWITCHS));
-        }
+            btnHandler(analogRead(SWITCHS));
+       }
 }
 
 void btnHandler(uint16_t adcValue){
-  if(adcValue >= 30 ){
+  if(adcValue >= 100 ){
     if ((adcValue >= UP_ADC - ERR) && (adcValue <= UP_ADC + ERR)){
         volumeUp(); 
     }else if ((adcValue >= DOWN_ADC - ERR) && (adcValue <= DOWN_ADC + ERR)){
@@ -105,48 +111,84 @@ void trigger(){
 }
 
 void volumeUp(){
-    if(VOLUME < 16){
+    if((analogRead(SFX_ACT) > 512) &&  (VOLUME < 16)){
         volumeUpRecursive();
         volumeUpRecursive();
         VOLUME++;
         lcd.setCursor(VOLUME - 1,1);
         lcd.write(0xFF);
+        delay(450);
     }
-    delay(500);
 }
 void volumeUpRecursive(){
     uint16_t vol;
-      if (! (vol=sfx.volUp()) ) {
-        delay(50);
+      if (! (vol = sfx.volUp()) ) {
+        delay(10);
         volumeUpRecursive();
-    } else { 
-        Serial.print("Volume: "); 
-        Serial.println(vol);
     }
 }
 
 
 void volumeDown(){
-    if(VOLUME > 0){
+    if((analogRead(SFX_ACT) > 512) && (VOLUME > 0)){
+        Serial.println("in!");
         volumeDownRecursive();
         volumeDownRecursive();
         VOLUME--;
         lcd.setCursor(VOLUME,1);
         lcd.write(' ');
+        delay(450);
     }
-    delay(500);
 }
 
 void volumeDownRecursive(){
     uint16_t vol;
-      if (! (vol=sfx.volDown()) ) {
-        delay(50);
+      if(! (vol=sfx.volDown())) {
+        delay(10);
         volumeDownRecursive();
-    } else { 
-        Serial.print("Volume: "); 
-        Serial.println(vol);
     }
 }
+void playPause() {
+  if (trackPlaying) {
+    pauseRecursive();
+    trackPlaying = false;
+  } else {
+    playRecursive();
+    trackPlaying = true;
+  }
+  delay(500);
+}
+
+void pauseRecursive() {
+  if (trackPlaying && ! sfx.pause()) {
+    delay(10);
+    pauseRecursive();
+  }
+}
+
+void playRecursive() {
+  if (!trackPlaying && ! sfx.unpause()) {
+    delay(10);
+    playRecursive();
+  }
+}
+
+void stopAudio(){
+     if ((analogRead(SFX_ACT) < 512) && (!sfx.stop())){
+         stopRecursive();  
+    }
+}
+void stopRecursive(){
+    if ((analogRead(SFX_ACT) < 512) && (!sfx.stop())) {
+        delay(10);
+        stopRecursive();
+    }
+}
+
+
+
+
+
 
 void cycleRight(){
     (LCDMODE == 3) ? (LCDMODE = 0) : (LCDMODE++);
@@ -167,7 +209,7 @@ void cycleLeft(){
 void semiAuto(){
      uint8_t toPlay = 0;
      sfx.playTrack(toPlay);
-     pulseLights(GREEN);
+     pulseLights(NEO_COLOR);
      fireLaserLed();
      while(analogRead(SFX_ACT) <= 512);
      while(analogRead(A2)> 512);
@@ -175,7 +217,7 @@ void semiAuto(){
 void fullAuto(){
      uint8_t toPlay = 0;
      sfx.playTrack(toPlay);
-     pulseLights(GREEN);
+     pulseLights(NEO_COLOR);
      fireLaserLed();
      while(analogRead(SFX_ACT)<= 512);
 }
@@ -189,50 +231,31 @@ void triggerHandler(){
         break;
         
         case 2:
-            if(!trackTriggered){
-                trackTriggered = true;
-                sfx.playTrack(1);    
-            }
+            if(analogRead(SFX_ACT) > 512){
+                sfx.playTrack(1);
+                trackPlaying = true;
+                trackTriggered = true; 
+            } 
+            delay(500);
             playPause();
-        break;
-        
+          break;
         case 3:
-            if(!trackTriggered){
-                trackTriggered = true;
-                sfx.playTrack(2);    
-            }
+            if(analogRead(SFX_ACT) > 512){
+                sfx.playTrack(2);
+                trackPlaying = true;
+                trackTriggered = true; 
+            } 
+            delay(500);
             playPause();
         break;
     }
 }
-
 
     
-void playPause(){
-    if(analogRead(SFX_ACT)<= 512){
-        pauseRecursive();
-    }else{
-        playRecursive();
-    }
-    delay(500);
-}
-
-void pauseRecursive(){
-    if (! sfx.pause()) {
-        delay(25);
-        pauseRecursive();
-    }
-}
-void playRecursive(){
-    if (! sfx.unpause()) {
-        delay(25);
-        playRecursive();
-    }
-}    
 
 void selectMode(){
     CURRENTMODE = LCDMODE;
-    trackTriggered = false;
+    stopAudio();
 }
 
 void clearLcdTopLine(){

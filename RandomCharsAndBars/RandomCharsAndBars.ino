@@ -72,14 +72,14 @@ uint8_t changeLevel() {
       
     if(lastMax < newLevel){
         for (uint8_t b = prevMax ; b < newLevel; b++) {
-            bar.setBar(TOTAL_LIGHTS-b, LED_GREEN);
+            bar.setBar(b, LED_GREEN);
             bar.writeDisplay();
             delay(barDelay);
         }
     
     }else{
         for (uint8_t b = prevMax; b > newLevel ; b--) {
-            bar.setBar(TOTAL_LIGHTS-b, LED_OFF);
+            bar.setBar(b, LED_OFF);
             bar.writeDisplay();
             delay(barDelay);
         }
